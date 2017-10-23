@@ -89,43 +89,6 @@ def corr(p1,p2):
 def window_wts(p1):
     NotImplemented
 
-def create_plots(fig_no, temp, actual, iw, w, l, symbol, method, chartarr):
-
-    temp= pd.DataFrame(temp)
-    if "direction" in temp.columns:
-        predicted = temp['direction']
-    else:
-        predicted = temp.ix[:,0]
-
-    if isinstance(actual, pd.core.series.Series) == False:
-        actual = actual.ix[:,0]
-
-    r,h,s = chartarr
-
-    if r=='y':
-        common_index = predicted.index.intersection(actual.index)
-        predicted =predicted[common_index]
-        actual = actual[common_index]
-        hits = (np.sign(predicted)== np.sign(actual))
-        running_perf = pd.rolling_mean(hits, 30).dropna()
-        plt.figure(fig_no)
-        plt.plot(running_perf.index.to_datetime(), running_perf, label=w)
-
-    if h=='y':
-        plt.figure(fig_no+1*(r=='y')) #activate this fig
-        plt.hist(temp['predictor'], histtype='step', label='w')
-        plt.axvline(x=0)
-
-    if s=='y':
-        plt.figure(fig_no+1*(r=='y')+1*(h=='y'))
-        plt.subplot(1,1,iw)
-        plt.scatter(temp['predictor'][actual.index], actual)
-        plt.axvline(x=0)
-        plt.axhline(y=0)
-        plt.xlabel(method.__name__+' predictor '+ w)
-        plt.ylabel('actual '+ symbol)
-
-
 
 
 

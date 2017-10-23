@@ -16,6 +16,8 @@ warnings.filterwarnings("ignore")
 
 display_setting()
 
+
+
 '''
 Structure:
 - This main module depends on modules mentioned under 'my libs' above.
@@ -36,8 +38,8 @@ Still to add
 '''
 
 '''variables for base data'''
-start_date = datetime.datetime(2014, 01, 02, 23, 59)
-end_date = datetime.datetime(2016, 02, 19, 23, 59)
+start_date = datetime.datetime(2014, 1, 2, 23, 59)
+end_date = datetime.datetime(2016, 2, 19, 23, 59)
 base_series = 'px' # can be px or rx for price or return. The selected trend detection method is applied to this base series or its smoothed version
 smoothing = 'None' # can be None, MA, EWMA. This is applied on top of the base series.
                     # It might make sense of have different base and smoothing combination for different trend detection methods but is that too much data mining?
@@ -63,6 +65,8 @@ histogram = 'n'
 scatter = 'n'
 running_agg = 'n'
 
+plot= plotting(running, histogram, scatter, running_agg)
+
 '''symbol and data variables'''
 bbg_sym_list = ['USDKRW_Curncy'] # ', USDPLN_Curncy, 'USDINR_Curncy'
 cols = ['price']
@@ -73,19 +77,6 @@ agg_signal = copy.deepcopy(signals) # dict instead of df since dates might be di
 actual = dict.fromkeys(bbg_sym_list)
 daily = dict.fromkeys(bbg_sym_list)
 fig_no = 1
-
-if 1*(running == 'y') + 1*(histogram == 'y') + 1*(scatter == 'y') + 1*(running_agg == 'y') > 0:
-    analyze_plt = 'y' # if you want some plots with analysis
-else:
-    analyze_plt = 'n'
-
-def get_data_for_symbol(sym, cols):
-    min_bars = get_data(sym, cols)
-    if base_series == 'Rx':
-        min_bars = np.log(min_bars).diff(1)
-    min_bars = convert_tz(min_bars)
-    selected_data = min_bars[(min_bars.index > start_date) & (min_bars.index < end_date)]
-    return selected_data
 
 for isym, sym in enumerate(bbg_sym_list):
 
@@ -103,21 +94,7 @@ for isym, sym in enumerate(bbg_sym_list):
         else:
             bars_sym = bars[sym]
 
-        if analyze_plt == 'y':
-            if running == 'y':
-                plt.figure(fig_no)
-                plt.title(sym + " " +method_list_names[im] + " running perf")
-            if histogram == 'y':
-                plt.figure(fig_no + 1 * (running == 'y'))
-                plt.title(sym + " " + method_list_names[im] + " hist")
-            if scatter == 'y':
-                plt.figure(fig_no + 1* (running == 'y') + 1*(histogram == 'y'))
-                plt.title(sym + " " + method_list_names[im] + " p_scatter")
-            if running_agg == "y":
-                f = fig_no + 1*(running == "y") + 1*(histogram == 'y') + 1*(scatter == 'y')
-                plt.figure(f)
-                plt.title(sym + " " + method_list_names[im] + " Agg running perf")
-            plt.figure(1)
+        plot.start_plot()
 
         for iw, w in enumerate(windows):
             if (im == 0) & (iw == 0):
@@ -141,7 +118,7 @@ for isym, sym in enumerate(bbg_sym_list):
                 print w, " hit ratio: ", hit_return(temp['direction'], actual[sym]), \
                     ", mean move right, wrong: ", relative_pl(temp['direction'], actual [sym], daily[sym])
 
-            if analyze_plt == 'y':
+            if plot.analyze_plt == 'y':
                 create_plots(fig_no, temp, actual[sym], iw, w, len(windows), sym, m, [running, histogram, scatter])
                 plt.figure(max(fig_no - 1, 1)) # activate this # make this one active for next loop of running performance
 
