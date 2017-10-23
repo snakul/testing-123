@@ -15,7 +15,7 @@ TZ_dict = {'USDCZK_Curncy':'Europe/Prague','USDNOK_Curncy':'Europe/Oslo','USDHUF
            'AUDUSD_Curncy':'Australia/Sydney'}
 
 def display_setting():
-    pd.set_option('display.max_rows', 500, 'display.max_colums', 500, 'display.width', 1000, 'display.precision', 3)
+    pd.set_option('display.max_rows', 500, 'display.max_columns', 500, 'display.width', 1000, 'display.precision', 3)
     pd.set_option('display.float_format', lambda x: '%.3f' % x)
     np.set_printoptions(precision =2, linewidth=1000, threshold=500, suppress=True)
 
