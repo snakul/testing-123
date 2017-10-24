@@ -10,13 +10,9 @@ from utilities import *
 from signal_generation_daily import *
 from analyze_perf import *
 from sig_agg import *
-
-import warnings
-warnings.filterwarnings("ignore")
+from plotting_functions import *
 
 display_setting()
-
-
 
 '''
 Structure:
@@ -53,116 +49,88 @@ forecast_horizon = '1D' # what to do if horizon <1D
 
 '''variables for aggregation'''
 aggregate_w = 'n' # aggregate across lookback windows for a given method
-agg_method_list = [running_perf, optimal_no_corr, running_regression] # specify a method to aggregate signals across diff lookback windows
+agg_method_list = [aggregator.running_perf, aggregator.optimal_no_corr, aggregator.running_regression] # specify a method to aggregate signals across diff lookback windows
 signal_rebal_freq = 'D' # or H or W. Each day/week/hour you update the signals from different signal genrators, and generate trades keeping the portfolio weights same
 # port_opt_method = max diversification etc
 # portfolio rebal freq = ?
 
 '''variables for analysis and plots'''
-analyze = 'y'
-running = 'n'
-histogram = 'n'
-scatter = 'n'
-running_agg = 'n'
-
-plot= plotting(running, histogram, scatter, running_agg)
+print_perf = 'y'
+plot= plotting(running =0, histogram =0, scatter =0, running_agg =0)
 
 '''symbol and data variables'''
 bbg_sym_list = ['USDKRW_Curncy'] # ', USDPLN_Curncy, 'USDINR_Curncy'
 cols = ['price']
-bars = dict.fromkeys(bbg_sym_list)
+prices = dict.fromkeys(bbg_sym_list)
 
 signals = {x: dict.fromkeys(method_list_names) for x in bbg_sym_list} # empty dict of dicts with keyvals = bbg symbols
 agg_signal = copy.deepcopy(signals) # dict instead of df since dates might be different across symbols
-actual = dict.fromkeys(bbg_sym_list)
+rlzd = dict.fromkeys(bbg_sym_list)
 daily = dict.fromkeys(bbg_sym_list)
 fig_no = 1
 
 for isym, sym in enumerate(bbg_sym_list):
 
     '''step 1- get symbol and data'''
-    bars[sym] = get_data_for_symbol(sym, cols)
+    prices[sym] = get_data_for_symbol(sym, cols)
 
     ''' step 2- signal generation
     using different trend detection methods and using diff lookback window sizes'''
 
     for im, m in enumerate(method_list):
         df_list = []
-
-        if m.__name__ == "variance_ratio" and base_series == "px":
-            bars_sym = np.log(bars[sym]).diff(1)
-        else:
-            bars_sym = bars[sym]
-
         plot.start_plot()
 
-        for iw, w in enumerate(windows):
-            if (im == 0) & (iw == 0):
+        for iwindow, window in enumerate(windows):
+            if (im == 0) & (iwindow == 0):
                 '''calculate actual moves at given forecast horizon and daily prices'''
-                '''bars[sym] used here rather than bars_sym because we never need returns here only prices'''
-                actual_moves = create_window_df(bars[sym], forecast_horizon, "n")
-                actual[sym] = actual_moves.dropna().ix[:, 0] # this actual is only used in analyzing the perf of signal. Only window = '1D' is used as we are only looking 1 day ahead. Only first method is used as method doesnt change actual moves next day
-                daily[sym] = pd.DataFrame(bars[sym].resample('1D', how = 'last').dropna())
+                rlzd_moves = create_window_df(prices[sym], forecast_horizon, "n")
+                rlzd[sym] = rlzd_moves.dropna().ix[:, 0] # this actual is only used in analyzing the perf of signal. Only window = '1D' is used as we are only looking 1 day ahead. Only first method is used as method doesnt change actual moves next day
+                daily[sym] = pd.DataFrame(prices[sym].resample('1D', how = 'last').dropna())
                 daily[sym].index = daily[sym].index.date
 
-            args = (bars_sym, w, param_list[im])
-            strat = GTS(sym, bars_sym, m, *args) # instantiate an object of the class GTS using specified trend method
+            args = (prices[sym], window, param_list[im])
+            strat = GTS(sym, prices[sym], m, *args) # instantiate an object of the class GTS using specified trend method
             temp = strat.generate_signals()
             temp.dropna(inplce = True)
 
-            if analyze == 'y': # this will only analyze for a given symbol and window (not aggregate)
-                if im == 0 and iw ==0:
-                    print '\n', sym
-                if iw ==0:
-                    print m.__name__, " ", param_list[im]
-                print w, " hit ratio: ", hit_return(temp['direction'], actual[sym]), \
-                    ", mean move right, wrong: ", relative_pl(temp['direction'], actual [sym], daily[sym])
+            print_perf()
 
             if plot.analyze_plt == 'y':
-                create_plots(fig_no, temp, actual[sym], iw, w, len(windows), sym, m, [running, histogram, scatter])
+                plot.create_signal_plots( temp, rlzd[sym], iwindow, window, len(windows), sym, m)
                 plt.figure(max(fig_no - 1, 1)) # activate this # make this one active for next loop of running performance
 
             if signal_method == 'combined':
                 temp['final'] = temp['direction'] * temp['strength']
                 temp.drop(['trend', 'direction', 'strength', 'predictor'], axis = 1, inplace = True)
-                temp.rename(columns = {'final' : w}, inplace=True)
+                temp.rename(columns = {'final' : window}, inplace=True)
             else:
                 temp.drop(['trend', 'strength', 'predictor'], axis =1, inplace = True)
-                temp.rename(columns = {'direction' : w}, inplace=True)
+                temp.rename(columns = {'direction' : window}, inplace=True)
             df_list.append(temp) # each member of the list is a signal dataframe for a given window
 
         signals[sym][m.__name__] = pd.concat(df_list, axis =1) # concatenate different windows for a given symbol/method into single df
 
         '''step 3- signal aggregation across windows'''
-        # Input - for each asset in portfoliom, for each signal method , a signal series for each window
+        # Input - for each asset in portfolio, for each signal method, a signal series for each window
         # Output - for each asset in portfolio, for each signal method, a signal aggregated across windows
         if aggregate_w == 'y':
-            w_list = [30, 30, 30] # for testing only using various lookback windows for signal aggregation
+            lookback_list = [30] # for testing only using various lookback windows for signal aggregation
             e = 0
-            for agg_i, agg_method in enumerate(agg_method_list):
-                if agg_method == running_perf:
-                    agg_signal[sym][m.__name__] = agg_method(signals[sym][m.__name__], signal_rebal_freq, actual[sym], w_list[agg_i], e)
-                else:
-                    agg_signal[sym][m.__name__] = agg_method(signals[sym][m.__name__], signal_rebal_freq, actual[sym],  w_list[agg_i])
+            for i_agg, agg_method in enumerate(agg_method_list):
+                agg_object = aggregator(signal_df = signals[sym][m.__name__],
+                                        rebal_freq = signal_rebal_freq,
+                                        realized = rlzd[sym],
+                                        lookback = lookback_list[i_agg],
+                                        eps = e)
+                agg_signal[sym][m.__name__] = agg_method(agg_object)
+                print_perf_2()
 
-                if analyze == 'y': # this will analyze for agg symbol
-                    print agg_method.__name__, " hit ratio: ", hit_return(agg_signal[sym][m.__name__], actual[sym]), \
-                        ", mean move right, wrong: ", relative_pl(agg_signal[sym][m.__name__], actual[sym], daily[sym])
+                if plot.running_agg:
+                    plot.create_agg_plots( agg_signal[sym][m.__name__], rlzd[sym],  agg_method.__name__, len(windows))
+        plot.activate_next()
 
-                if running_agg == "y":
-                    create_plots(f, agg_signal[sym][m.__name__], actual[sym], iw, agg_method.__name__, len(windows), sym, m, ['y', '', ''])
-        if running == 'y':
-            plt.figure(fig_no)
-            plt.legend(loc = 'best')
-        if histogram == 'y':
-            plt.figure(fig_no + 1*(running == 'y'))
-            plt.legend(loc = 'best')
-        if running == 'y':
-            plt.figure(f)
-            plt.legend(loc = 'best')
-        fig_no = fig_no + 1*(running == 'y') + 1*(histogram == 'y') + 1*(scatter == 'y') + 1*(running_agg == 'y')
-
-if analyze_plt == 'y':
+if plot.analyze_plt == 'y':
     plt.show()
 
 '''step 4 portfolio optimization

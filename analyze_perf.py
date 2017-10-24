@@ -22,6 +22,22 @@ do the performance analysis for:
 selected anems in each asset class 
 selected windows- short,med,long and aggreagated (1D, 3D, 7D, agg)"""
 
+
+def print_perf():
+    if print_perf == 'y':  # this will only analyze for a given symbol and window (not aggregate)
+        if im == 0 and iwindow == 0:
+            print('\n', sym)
+        if iwindow == 0:
+            print(m.__name__, " ", param_list[im])
+        print(window, " hit ratio: ", hit_return(temp['direction'], actual[sym]), \
+              ", mean move right, wrong: ", relative_pl(temp['direction'], actual[sym], daily[sym]))
+
+def print_perf_2():
+    if print_perf == 'y':  # this will analyze for agg symbol
+        print
+        agg_method.__name__, " hit ratio: ", hit_return(agg_signal[sym][m.__name__], actual[sym]), \
+        ", mean move right, wrong: ", relative_pl(agg_signal[sym][m.__name__], actual[sym], daily[sym])
+
 def hit_return(predicted, actual):
     '''returns the % times the predicted direction was correct,and average return of a method'''
     common_index= predicted.index.intersection(actual.index)

@@ -146,6 +146,9 @@ class Var_scale:
     def variance_ratio(self, time_series, window='1D', q=15.0):
         '''if px is random walk, then variance of returns increases over time linearly. The var of its q-differences is q times var of its first difference.
         ref paper- Lo, Mackinlay 1988. Stock market prices do not follow random walks: Evidence from a specification test'''
+
+        if base_Series= "px":
+            time_series = np.log(time_series).diff(1)
         x_df = create_window_df(time_series, window)
         change = change_over_window(x_df, window)
         w = x_df.apply(lambda x: x.last_valid_index(), axis=1) # w is different for each row
