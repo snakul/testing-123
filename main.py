@@ -88,8 +88,8 @@ for isym, sym in enumerate(bbg_sym_list):
         for iwindow, window in enumerate(windows):
             
             args = (prices[sym], window, param_list[im])
-            strat = GTS(sym, prices[sym], m, *args) # instantiate an object of the class GTS using specified trend method
-            temp = strat.generate_signals()
+            strat = GTS(sym, prices[sym], m) # instantiate an object of the class GTS using specified trend method
+            temp = strat.generate_signals(*args)
             temp.dropna(inplace = True)
 
             print_perf()
