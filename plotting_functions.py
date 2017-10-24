@@ -42,7 +42,7 @@ class plotting(object):
             predicted = predict.ix[:, 0]
 
         if isinstance(rlzd, pd.core.series.Series) == False:
-            actual = rlzd.ix[:, 0]
+            rlzd = rlzd.ix[:, 0]
 
         if self.running:
             common_index = predicted.index.intersection(rlzd.index)
@@ -94,7 +94,7 @@ class plotting(object):
         if self.histogram == 'y':
             plt.figure(self.fig_no + self.running)
             plt.legend(loc = 'best')
-        if self.running == 'y':
+        if self.running_agg == 'y':
             plt.figure(f)
             plt.legend(loc = 'best')
         self.fig_no = self.fig_no + self.running + self.histogram + self.scatter + self.running_agg
