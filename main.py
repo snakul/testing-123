@@ -77,22 +77,20 @@ for isym, sym in enumerate(bbg_sym_list):
     ''' step 2- signal generation
     using different trend detection methods and using diff lookback window sizes'''
 
+    '''calculate actual moves at given forecast horizon and daily prices'''
+    rlzd_moves = create_window_df(prices[sym], forecast_horizon, "n")
+    rlzd[sym] = rlzd_moves.dropna().ix[:, 0] # this actual is only used in analyzing the perf of signal. Only window = '1D' is used as we are only looking 1 day ahead. Only first method is used as method doesnt change actual moves next day
+     
     for im, m in enumerate(method_list):
         df_list = []
         plot.start_plot()
 
         for iwindow, window in enumerate(windows):
-            if (im == 0) & (iwindow == 0):
-                '''calculate actual moves at given forecast horizon and daily prices'''
-                rlzd_moves = create_window_df(prices[sym], forecast_horizon, "n")
-                rlzd[sym] = rlzd_moves.dropna().ix[:, 0] # this actual is only used in analyzing the perf of signal. Only window = '1D' is used as we are only looking 1 day ahead. Only first method is used as method doesnt change actual moves next day
-                daily[sym] = pd.DataFrame(prices[sym].resample('1D', how = 'last').dropna())
-                daily[sym].index = daily[sym].index.date
-
+            
             args = (prices[sym], window, param_list[im])
             strat = GTS(sym, prices[sym], m, *args) # instantiate an object of the class GTS using specified trend method
             temp = strat.generate_signals()
-            temp.dropna(inplce = True)
+            temp.dropna(inplace = True)
 
             print_perf()
 
